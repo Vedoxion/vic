@@ -1,9 +1,9 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# Fancy Arix Theme Installer for Pterodactyl (Termux)
+# Arix v1.2 Launcher Installer (Termux)
 
 PTERO_PATH="/var/www/pterodactyl"
-ARIX_PATH="$HOME/arix-theme"
-GIT_URL="https://github.com/YOUR_USERNAME/arix-theme.git"   # <-- change this
+ARIX_PATH="$HOME/vic"
+GIT_URL="https://github.com/Vedoxion/vic.git"
 
 # Colors
 BLUE="\033[1;34m"
@@ -12,7 +12,6 @@ YELLOW="\033[1;33m"
 RED="\033[1;31m"
 NC="\033[0m" # reset color
 
-# Loading bar function
 loading_bar() {
     echo -ne "${BLUE}>>> $1 ["
     for i in {1..20}; do
@@ -23,17 +22,21 @@ loading_bar() {
 }
 
 echo -e "${BLUE}=========================================${NC}"
-echo -e "${GREEN}     Arix v1.2 Theme Installer (Pro)     ${NC}"
+echo -e "${GREEN}   Arix v1.2 Installer via GitHub Repo   ${NC}"
 echo -e "${BLUE}=========================================${NC}"
 
-# Step 1 - Clone repo
-loading_bar "Cloning GitHub repo"
-rm -rf "$ARIX_PATH"
-git clone "$GIT_URL" "$ARIX_PATH" || { echo -e "${RED}ERROR: Git clone failed!${NC}"; exit 1; }
+# Step 1 - Clone or Update Repo
+if [ -d "$ARIX_PATH" ]; then
+    echo -e "${YELLOW}>>> Repo already exists, updating...${NC}"
+    cd "$ARIX_PATH" && git pull
+else
+    loading_bar "Cloning GitHub repo"
+    git clone "$GIT_URL" "$ARIX_PATH" || { echo -e "${RED}ERROR: Git clone failed!${NC}"; exit 1; }
+fi
 
-# Step 2 - Backup old files
-read -p ">>> Do you want to backup old files before install? (y/n): " choice
-if [[ "$choice" =~ ^[Yy]$ ]]; then
+# Step 2 - Backup Option
+read -p ">>> Backup old panel files before install? (y/n): " backup_choice
+if [[ "$backup_choice" =~ ^[Yy]$ ]]; then
     echo -e "${YELLOW}>>> Backing up old panel files...${NC}"
     mkdir -p "$HOME/ptero-backup"
     cp -r "$PTERO_PATH/public" "$HOME/ptero-backup/public-$(date +%F-%H%M)"
@@ -43,41 +46,11 @@ else
     echo -e "${YELLOW}>>> Skipping backup...${NC}"
 fi
 
-# Step 3 - Copy files
-loading_bar "Copying theme files"
-cp -r "$ARIX_PATH/pterodactyl/"* "$PTERO_PATH/"
-
-# Step 4 - Run migrations
-read -p ">>> Run PHP database migrations? (y/n): " migrate_choice
-if [[ "$migrate_choice" =~ ^[Yy]$ ]]; then
-    echo -e "${BLUE}>>> Running: php artisan migrate --force${NC}"
-    cd "$PTERO_PATH" || exit
-    php artisan migrate --force \
-        && echo -e "${GREEN}>>> Migrations successful!${NC}" \
-        || echo -e "${RED}>>> Migration failed!${NC}"
-else
-    echo -e "${YELLOW}>>> Skipping migrations...${NC}"
-fi
-
-# Step 5 - Clear caches
-loading_bar "Clearing PHP caches"
-php artisan view:clear
-php artisan config:clear
-php artisan cache:clear
-
-# Step 6 - Rebuild frontend
-read -p ">>> Run NPM build (install + production)? (y/n): " build_choice
-if [[ "$build_choice" =~ ^[Yy]$ ]]; then
-    echo -e "${BLUE}>>> Running: npm install${NC}"
-    npm install
-
-    echo -e "${BLUE}>>> Running: npm run build:production${NC}"
-    npm run build:production \
-        && echo -e "${GREEN}>>> Frontend build complete!${NC}" \
-        || echo -e "${RED}>>> Frontend build failed!${NC}"
-else
-    echo -e "${YELLOW}>>> Skipping frontend build...${NC}"
-fi
+# Step 3 - Run installer from repo
+cd "$ARIX_PATH" || exit
+echo -e "${BLUE}>>> Running repo installer: install.sh${NC}"
+chmod +x install.sh
+./install.sh
 
 echo -e "${GREEN}=========================================${NC}"
 echo -e "${GREEN}✅ Arix v1.2 installed successfully!${NC}"

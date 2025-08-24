@@ -1,59 +1,81 @@
-#!/data/data/com.termux/files/usr/bin/bash
-# Arix v1.2 Launcher Installer (Termux)
-
-PTERO_PATH="/var/www/pterodactyl"
-ARIX_PATH="$HOME/vic"
-GIT_URL="https://github.com/Vedoxion/vic.git"
+#!/bin/bash
+# VictusCloud Installer Script
 
 # Colors
-BLUE="\033[1;34m"
-GREEN="\033[1;32m"
-YELLOW="\033[1;33m"
-RED="\033[1;31m"
-NC="\033[0m" # reset color
+BLUE="\e[34m"
+GREEN="\e[32m"
+RED="\e[31m"
+YELLOW="\e[33m"
+RESET="\e[0m"
 
-loading_bar() {
-    echo -ne "${BLUE}>>> $1 ["
-    for i in {1..20}; do
-        echo -ne "#"
-        sleep 0.05
+# Progress bar function
+progress_bar() {
+    local duration=$1
+    local i=0
+    while [ $i -le $duration ]; do
+        printf "\r${BLUE}[%-${duration}s] %d%%${RESET}" $(printf "#%.0s" $(seq 1 $i)) $((i * 100 / duration))
+        sleep 0.1
+        ((i++))
     done
-    echo -e "]${NC}"
+    echo ""
 }
 
-echo -e "${BLUE}=========================================${NC}"
-echo -e "${GREEN}   Arix v1.2 Installer via GitHub Repo   ${NC}"
-echo -e "${BLUE}=========================================${NC}"
+# Banner
+echo -e "${BLUE}"
+echo "===================================="
+echo "     VictusCloud Auto Installer     "
+echo "===================================="
+echo -e "${RESET}"
 
-# Step 1 - Clone or Update Repo
-if [ -d "$ARIX_PATH" ]; then
-    echo -e "${YELLOW}>>> Repo already exists, updating...${NC}"
-    cd "$ARIX_PATH" && git pull
-else
-    loading_bar "Cloning GitHub repo"
-    git clone "$GIT_URL" "$ARIX_PATH" || { echo -e "${RED}ERROR: Git clone failed!${NC}"; exit 1; }
+# Check for git
+if ! command -v git &> /dev/null; then
+    echo -e "${YELLOW}[INFO]${RESET} Git not found. Installing..."
+    pkg install -y git || apt-get install -y git
 fi
 
-# Step 2 - Backup Option
-read -p ">>> Backup old panel files before install? (y/n): " backup_choice
-if [[ "$backup_choice" =~ ^[Yy]$ ]]; then
-    echo -e "${YELLOW}>>> Backing up old panel files...${NC}"
-    mkdir -p "$HOME/ptero-backup"
-    cp -r "$PTERO_PATH/public" "$HOME/ptero-backup/public-$(date +%F-%H%M)"
-    cp -r "$PTERO_PATH/resources/views" "$HOME/ptero-backup/views-$(date +%F-%H%M)"
-    echo -e "${GREEN}>>> Backup complete!${NC}"
+# Clone repo
+echo -e "${BLUE}[STEP]${RESET} Cloning repository..."
+git clone https://github.com/Vedoxion/vic.git vic-install
+cd vic-install || exit
+
+# Install PHP
+if ! command -v php &> /dev/null; then
+    echo -e "${YELLOW}[INFO]${RESET} PHP not found. Installing..."
+    pkg install -y php || apt-get install -y php
 else
-    echo -e "${YELLOW}>>> Skipping backup...${NC}"
+    echo -e "${GREEN}[OK]${RESET} PHP already installed."
 fi
 
-# Step 3 - Run installer from repo
-cd "$ARIX_PATH" || exit
-echo -e "${BLUE}>>> Running repo installer: install.sh${NC}"
-chmod +x install.sh
-./install.sh
+# Install Node.js
+if ! command -v npm &> /dev/null; then
+    echo -e "${YELLOW}[INFO]${RESET} Node.js not found. Installing..."
+    pkg install -y nodejs || apt-get install -y nodejs npm
+else
+    echo -e "${GREEN}[OK]${RESET} Node.js already installed."
+fi
 
-echo -e "${GREEN}=========================================${NC}"
-echo -e "${GREEN}✅ Arix v1.2 installed successfully!${NC}"
-echo -e "${YELLOW}Restart your panel with:${NC}"
-echo -e "   pkill -f artisan && php artisan serve --host=0.0.0.0 --port=8080"
-echo -e "${GREEN}=========================================${NC}"
+# Progress bar (randomly show sometimes)
+if [ $((RANDOM % 2)) -eq 0 ]; then
+    echo -e "${BLUE}[STEP]${RESET} Preparing environment..."
+    progress_bar 20
+fi
+
+# Install Node dependencies
+echo -e "${BLUE}[STEP]${RESET} Installing npm dependencies..."
+npm install
+
+# Migration confirmation
+echo -e "${YELLOW}[QUESTION]${RESET} Do you want to run database migration? (y/n)"
+read -r choice
+if [[ "$choice" =~ ^[Yy]$ ]]; then
+    echo -e "${BLUE}[STEP]${RESET} Running migration..."
+    php artisan migrate --force
+    echo -e "${GREEN}[OK]${RESET} Migration complete."
+else
+    echo -e "${RED}[SKIPPED]${RESET} Migration skipped."
+fi
+
+# Finish
+echo -e "${GREEN}===================================="
+echo " VictusCloud installed successfully!"
+echo "====================================${RESET}"

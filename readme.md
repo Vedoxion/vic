@@ -6,6 +6,6 @@ A simple TUI-based VPS toolkit that includes:
 
 ## Installation
 ```bash
-curl -O https://raw.githubusercontent.com/Vedoxion/vic/main/vps-toolkit.sh
+curl -O https://raw.githubusercontent.com/Vedoxion/vic/main/toolkit.sh
 chmod +x vps-toolkit.sh
 sudo ./vps-toolkit.sh
